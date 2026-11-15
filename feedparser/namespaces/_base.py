@@ -483,6 +483,8 @@ class Namespace:
 
     def _start_enclosure(self, attrs_d):
         attrs_d = self._enforce_href(attrs_d)
+        if "href" in attrs_d:
+            attrs_d["href"] = self.resolve_uri(attrs_d["href"])
         context = self._get_context()
         attrs_d["rel"] = "enclosure"
         context.setdefault("links", []).append(FeedParserDict(attrs_d))
@@ -490,7 +492,7 @@ class Namespace:
     def _start_source(self, attrs_d):
         if "url" in attrs_d:
             # This means that we're processing a source element from an RSS 2.0 feed
-            self.sourcedata["href"] = attrs_d["url"]
+            self.sourcedata["href"] = self.resolve_uri(attrs_d["url"])
         self.push("source", 1)
         self.insource = 1
         self.title_depth = -1

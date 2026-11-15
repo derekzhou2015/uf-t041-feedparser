@@ -101,7 +101,17 @@ def make_safe_absolute_uri(base, rel=None):
     if not ACCEPTABLE_URI_SCHEMES:
         return _urljoin(base, rel or "")
     if not base:
-        return rel or ""
+        # There is no base URI to resolve against, so relative URIs are
+        # returned unchanged. Absolute URIs must still use an acceptable
+        # scheme; unsafe schemes such as ``javascript:`` are stripped.
+        rel = rel or ""
+        try:
+            scheme = urllib.parse.urlparse(rel.strip()).scheme
+        except ValueError:
+            return ""
+        if not scheme or scheme in ACCEPTABLE_URI_SCHEMES:
+            return rel
+        return ""
     if not rel:
         try:
             scheme = urllib.parse.urlparse(base)[0]

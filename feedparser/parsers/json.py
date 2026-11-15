@@ -29,6 +29,7 @@ import json
 
 from ..datetimes import _parse_date
 from ..sanitizer import sanitize_html
+from ..urls import make_safe_absolute_uri
 from ..util import FeedParserDict
 
 
@@ -61,6 +62,9 @@ class JSONParser:
         self.namespacesInUse = []
         self.entries = []
 
+    def resolve_uri(self, uri):
+        return make_safe_absolute_uri(self.baseuri, uri)
+
     def feed(self, file):
         data = json.load(file)
 
@@ -72,7 +76,10 @@ class JSONParser:
 
         for src, dst in self.FEED_FIELDS:
             if src in data:
-                self.feeddata[dst] = data[src]
+                value = data[src]
+                if src in ("icon", "home_page_url"):
+                    value = self.resolve_uri(value)
+                self.feeddata[dst] = value
         if "author" in data:
             self.parse_author(data["author"], self.feeddata)
         # TODO: hubs; expired has no RSS equivalent
@@ -83,7 +90,10 @@ class JSONParser:
         entry = FeedParserDict()
         for src, dst in self.ITEM_FIELDS:
             if src in e:
-                entry[dst] = e[src]
+                value = e[src]
+                if src in ("url", "external_url"):
+                    value = self.resolve_uri(value)
+                entry[dst] = value
 
         if "content_text" in e:
             entry["content"] = c = FeedParserDict()
@@ -114,8 +124,7 @@ class JSONParser:
 
         return entry
 
-    @staticmethod
-    def parse_author(parent, dest):
+    def parse_author(self, parent, dest):
         dest["author_detail"] = detail = FeedParserDict()
         if "name" in parent:
             dest["author"] = detail["name"] = parent["name"]
@@ -123,12 +132,11 @@ class JSONParser:
             if parent["url"].startswith("mailto:"):
                 detail["email"] = parent["url"][7:]
             else:
-                detail["href"] = parent["url"]
+                detail["href"] = self.resolve_uri(parent["url"])
 
-    @staticmethod
-    def parse_attachment(attachment):
+    def parse_attachment(self, attachment):
         enc = FeedParserDict()
-        enc["href"] = attachment["url"]
+        enc["href"] = self.resolve_uri(attachment["url"])
         enc["type"] = attachment["mime_type"]
         if "size_in_bytes" in attachment:
             enc["length"] = attachment["size_in_bytes"]

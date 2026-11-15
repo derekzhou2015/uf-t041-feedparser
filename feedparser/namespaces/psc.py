@@ -56,6 +56,8 @@ class Namespace:
         if self.psc_chapters_flag:
             start = self._get_attribute(attrs_d, "start")
             attrs_d["start_parsed"] = _parse_psc_chapter_start(start)
+            if "href" in attrs_d:
+                attrs_d["href"] = self.resolve_uri(attrs_d["href"])
 
             context = self._get_context()["psc_chapters"]
             context["chapters"].append(util.FeedParserDict(attrs_d))

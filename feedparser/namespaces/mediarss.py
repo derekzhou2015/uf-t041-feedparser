@@ -115,11 +115,15 @@ class Namespace:
             context["media_license"]["content"] = license_
 
     def _start_media_content(self, attrs_d):
+        if "url" in attrs_d:
+            attrs_d["url"] = self.resolve_uri(attrs_d["url"])
         context = self._get_context()
         context.setdefault("media_content", [])
         context["media_content"].append(attrs_d)
 
     def _start_media_thumbnail(self, attrs_d):
+        if "url" in attrs_d:
+            attrs_d["url"] = self.resolve_uri(attrs_d["url"])
         context = self._get_context()
         context.setdefault("media_thumbnail", [])
         self.push("url", 1)  # new
@@ -130,10 +134,12 @@ class Namespace:
         context = self._get_context()
         if url is not None and url.strip():
             if "url" not in context["media_thumbnail"][-1]:
-                context["media_thumbnail"][-1]["url"] = url
+                context["media_thumbnail"][-1]["url"] = self.resolve_uri(url)
 
     def _start_media_player(self, attrs_d):
         self.push("media_player", 0)
+        if "url" in attrs_d:
+            attrs_d["url"] = self.resolve_uri(attrs_d["url"])
         self._get_context()["media_player"] = FeedParserDict(attrs_d)
 
     def _end_media_player(self):

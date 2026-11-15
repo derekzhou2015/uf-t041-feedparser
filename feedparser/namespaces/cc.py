@@ -49,7 +49,7 @@ class Namespace:
         attrs_d = FeedParserDict()
         attrs_d["rel"] = "license"
         if value:
-            attrs_d["href"] = value
+            attrs_d["href"] = self.resolve_uri(value)
         context.setdefault("links", []).append(attrs_d)
 
     def _start_creativecommons_license(self, attrs_d):
@@ -63,7 +63,7 @@ class Namespace:
         attrs_d = FeedParserDict()
         attrs_d["rel"] = "license"
         if value:
-            attrs_d["href"] = value
+            attrs_d["href"] = self.resolve_uri(value)
         context.setdefault("links", []).append(attrs_d)
         del context["license"]
 

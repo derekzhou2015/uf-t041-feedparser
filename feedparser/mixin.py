@@ -140,6 +140,16 @@ class XMLParserMixin(
         "wfw_commentrss",
     }
 
+    # Attribute names that carry a URI on extension elements handled by the
+    # generic unknown-tag fallback. Their values are run through the same URI
+    # scheme whitelist as the dedicated promotion paths.
+    uri_attributes = {
+        "href",
+        "rdf:resource",
+        "uri",
+        "url",
+    }
+
     can_contain_relative_uris = {
         "content",
         "copyright",
@@ -313,7 +323,14 @@ class XMLParserMixin(
             if len(attrs_d) == 0:
                 # No attributes so merge it into the enclosing dictionary
                 return self.push(unknown_tag, 1)
-            # Has attributes so create it in its own dictionary
+            # Has attributes so create it in its own dictionary.
+            # Filter link-class attributes through the same URI scheme
+            # whitelist used everywhere else, so extension elements without
+            # a dedicated handler (e.g. thr:, admin:) cannot leak unsafe
+            # protocols via their href/url/resource attributes.
+            for attr in self.uri_attributes:
+                if attr in attrs_d and attrs_d[attr]:
+                    attrs_d[attr] = self.resolve_uri(attrs_d[attr])
             context = self._get_context()
             context[unknown_tag] = attrs_d
 
@@ -462,7 +479,7 @@ class XMLParserMixin(
             self.namespaces_in_use[prefix or ""] = uri
 
     def resolve_uri(self, uri):
-        return _urljoin(self.baseuri or "", uri)
+        return make_safe_absolute_uri(self.baseuri, uri)
 
     @staticmethod
     def decode_entities(element, data):
@@ -536,7 +553,13 @@ class XMLParserMixin(
         if (element in self.can_be_relative_uri) and output:
             # do not resolve guid elements with isPermalink="false"
             if not element == "id" or self.guidislink:
-                output = self.resolve_uri(output)
+                if element == "id":
+                    # ids are opaque identifiers (e.g. tag:/urn:), not
+                    # navigable links; keep resolving them against the base
+                    # without applying the URI scheme whitelist
+                    output = _urljoin(self.baseuri or "", output)
+                else:
+                    output = self.resolve_uri(output)
 
         # decode entities within embedded markup
         if not self.contentparams.get("base64", 0):
